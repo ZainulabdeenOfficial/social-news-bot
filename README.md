@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🤖 AI News Agent
 
 An intelligent automated system that fetches tech news, generates engaging social media posts with AI, creates professional images, and automatically shares them on LinkedIn, Twitter, and other platforms.
@@ -52,7 +53,6 @@ python main.py setup
 Or copy the template and edit manually:
 ```bash
 # Copy the template
-cp env_template.txt .env
 
 # Edit with your API keys
 ```
@@ -143,28 +143,13 @@ The web dashboard provides a beautiful interface for:
   - Test API connections
   - Monitor configuration status
   - Add news sources (read-only display)
-  - Adjust system settings
-
-## 🔧 Configuration
 
 ### News Sources
 
-Edit `config.py` to add or modify news sources:
-
-```python
-NEWS_SOURCES = [
-    {
-        'name': 'TechCrunch',
-        'url': 'https://techcrunch.com/feed/',
         'category': 'tech'
     },
     # Add more sources...
-]
-```
 
-### Posting Schedule
-
-Configure optimal posting times:
 
 ```python
 POSTING_SCHEDULE = {
@@ -348,3 +333,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Made with ❤️ by AI News Agent Team**
 
 *Transform your social media presence with AI-powered tech news automation!*
+=======
+# social-news-bot
+>>>>>>> c0e847343c7d6484acbdfb78d455262237a2f1d9
