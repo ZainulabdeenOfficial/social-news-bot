@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # 🤖 AI News Agent
 
 An intelligent automated system that fetches tech news, generates engaging social media posts with AI, creates professional images, and automatically shares them on LinkedIn, Twitter, and other platforms.
