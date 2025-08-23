@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+![Social News Bot Banner](https://raw.githubusercontent.com/ZainulabdeenOfficial/social-news-bot/main/LogoBot.png)
+
 # 🤖 AI News Agent
 
 An intelligent automated system that fetches tech news, generates engaging social media posts with AI, creates professional images, and automatically shares them on LinkedIn, Twitter, and other platforms.
@@ -330,9 +331,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Made with ❤️ by AI News Agent Team**
+**Made with ❤️ by M Zain Ul Abideen**
 
 *Transform your social media presence with AI-powered tech news automation!*
 =======
-# social-news-bot
->>>>>>> c0e847343c7d6484acbdfb78d455262237a2f1d9
+
