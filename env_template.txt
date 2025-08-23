@@ -1,0 +1,32 @@
+# AI News Agent Configuration
+# Copy this file to .env and fill in your API keys
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# LinkedIn Configuration
+LINKEDIN_CLIENT_ID=your_linkedin_client_id_here
+LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret_here
+LINKEDIN_ACCESS_TOKEN=your_linkedin_access_token_here
+
+# Twitter Configuration
+TWITTER_API_KEY=your_twitter_api_key_here
+TWITTER_API_SECRET=your_twitter_api_secret_here
+TWITTER_ACCESS_TOKEN=your_twitter_access_token_here
+TWITTER_ACCESS_TOKEN_SECRET=your_twitter_access_token_secret_here
+
+# Facebook Configuration (Optional)
+FACEBOOK_ACCESS_TOKEN=your_facebook_access_token_here
+
+# System Settings
+MAX_POSTS_PER_DAY=5
+POST_LENGTH_LIMIT=280
+IMAGE_SIZE=1024
+IMAGE_STYLE=professional
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=news_agent.log
+
+# Database (Optional - for advanced features)
+DATABASE_URL=sqlite:///news_agent.db
