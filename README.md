@@ -331,9 +331,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Made with ❤️ by AI News Agent Team**
+**Made with ❤️ by M Zain Ul Abideen**
 
 *Transform your social media presence with AI-powered tech news automation!*
 =======
-# social-news-bot
->>>>>>> c0e847343c7d6484acbdfb78d455262237a2f1d9
+
