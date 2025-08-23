@@ -12,6 +12,7 @@ tweepy>=4.14.0
 
 # Web framework and dashboard
 streamlit>=1.28.1
+flask>=2.3.0
 
 # Data processing and visualization
 pandas>=2.1.3
