@@ -14,25 +14,43 @@ from pathlib import Path
 
 def check_dependencies():
     """Check if required packages are installed"""
+    # Skip dependency check if running as executable
+    if getattr(sys, 'frozen', False):
+        print("✅ Running as executable - dependencies included")
+        return True
+    
     required_packages = [
-        'streamlit', 'openai', 'requests', 'beautifulsoup4',
-        'python-dotenv', 'schedule', 'Pillow', 'pandas', 'plotly'
+        ('streamlit', 'streamlit'),
+        ('openai', 'openai'),
+        ('requests', 'requests'),
+        ('beautifulsoup4', 'bs4'),
+        ('python-dotenv', 'dotenv'),
+        ('schedule', 'schedule'),
+        ('Pillow', 'PIL'),
+        ('feedparser', 'feedparser'),
+        ('pandas', 'pandas'),
+        ('numpy', 'numpy'),
+        ('plotly', 'plotly'),
+        ('tweepy', 'tweepy')
     ]
     
     missing_packages = []
     
-    for package in required_packages:
+    for package_name, import_name in required_packages:
         try:
-            __import__(package.replace('-', '_'))
+            __import__(import_name)
         except ImportError:
-            missing_packages.append(package)
+            missing_packages.append(package_name)
     
     if missing_packages:
         print("❌ Missing required packages:")
         for package in missing_packages:
             print(f"   - {package}")
-        print("\nPlease install them with:")
+        print("\n⚠️  These packages are required for the AI News Agent to run.")
+        print("If you are running the .exe file, you must install these dependencies on your system before running the executable.")
+        print("\nTo install all required packages, open a command prompt in this folder and run:")
         print("pip install -r requirements.txt")
+        print("\nAfter installing, try running the .exe file again.")
         return False
     
     return True

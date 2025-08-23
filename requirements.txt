@@ -9,26 +9,11 @@ feedparser>=6.0.10
 
 # Social media APIs
 tweepy>=4.14.0
-python-linkedin-v2>=0.9.0
 
 # Web framework and dashboard
 streamlit>=1.28.1
-flask>=3.0.0
-gunicorn>=21.2.0
 
 # Data processing and visualization
 pandas>=2.1.3
 numpy>=1.24.3
 plotly>=5.17.0
-matplotlib>=3.7.2
-seaborn>=0.12.2
-
-# Web scraping and automation
-selenium>=4.15.2
-webdriver-manager>=4.0.1
-
-# Additional utilities
-altair>=5.0.0
-pydeck>=0.8.0
-watchdog>=2.1.5
-gitpython>=3.1.0
