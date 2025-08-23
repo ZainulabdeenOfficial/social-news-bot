@@ -1,3 +1,4 @@
+![Social News Bot Banner](https://raw.githubusercontent.com/ZainulabdeenOfficial/social-news-bot/main/LogoBot.png)
 
 # 🤖 AI News Agent
 
