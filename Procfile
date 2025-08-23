@@ -1,1 +1,1 @@
-worker: python main.py run
+web: streamlit run web_dashboard.py --server.port=$PORT --server.address=0.0.0.0

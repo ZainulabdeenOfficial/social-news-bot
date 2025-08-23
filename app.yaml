@@ -1,0 +1,16 @@
+# Google Cloud App Engine configuration
+runtime: python311
+
+env_variables:
+  STREAMLIT_SERVER_HEADLESS: "true"
+  STREAMLIT_SERVER_ENABLE_CORS: "false"
+  STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION: "false"
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1
+  target_cpu_utilization: 0.6
+
+handlers:
+- url: /.*
+  script: auto
