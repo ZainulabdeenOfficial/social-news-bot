@@ -23,20 +23,26 @@ class ContentGenerator:
             
             # Generate content using OpenAI
             response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional tech content creator who writes engaging social media posts. Write in a conversational, informative tone that encourages engagement."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=500,
-                temperature=0.7
+    model="gpt-4",
+    messages=[
+        {
+            "role": "system",
+            "content": (
+                "You are a tech content creator. Write short, conversational, and engaging social media posts. "
+                "Keep them clear, scannable, and informative. "
+                "Use hooks, relatable examples, and practical insights. "
+                "End with a question or call-to-action to spark discussion."
             )
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ],
+    max_tokens=300,
+    temperature=0.8
+)
+
             
             generated_content = response.choices[0].message.content.strip()
             
