@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  dashboard:
+    build: .
+    container_name: newsbot_dashboard
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: newsbot_worker
+    command: ["python", "-m", "src.main", "run"]
+    env_file:
+      - .env
+    restart: unless-stopped
+
+

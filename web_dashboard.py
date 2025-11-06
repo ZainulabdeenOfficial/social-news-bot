@@ -9,12 +9,12 @@ from typing import Dict, List
 import time
 
 # Import our modules
-from config import Config
-from news_fetcher import NewsFetcher
-from content_generator import ContentGenerator
-from image_generator import ImageGenerator
-from social_media_poster import SocialMediaPoster
-from scheduler import NewsAgentScheduler
+from src.config import Config
+from src.services.news_fetcher import NewsFetcher
+from src.ai.content_generator import ContentGenerator
+from src.ai.image_generator import ImageGenerator
+from src.services.social_media_poster import SocialMediaPoster
+from src.scheduler import NewsAgentScheduler
 
 # Page configuration
 st.set_page_config(

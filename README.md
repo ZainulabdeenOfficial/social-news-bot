@@ -1,78 +1,79 @@
 ![Social News Bot Banner](https://raw.githubusercontent.com/ZainulabdeenOfficial/social-news-bot/main/LogoBot.png)
 
-# 🤖 AI News Agent
+# 🤖 AI News Agent (Gemini Edition)
 
-An intelligent automated system that fetches tech news, generates engaging social media posts using AI, and automatically posts to LinkedIn, Twitter, and other platforms at optimal times.
+Автоматический агент: собирает тех‑новости (RSS), генерирует посты через Gemini API, создаёт изображения (локально, бесплатно) и публикует в соцсети по расписанию. Есть веб‑дашборд (Streamlit) и Docker.
 
-## 🚀 Quick Deploy - Choose Your Platform
+## 🚀 Быстрый старт
 
-### 🟣 Vercel (Recommended - Fastest)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ZainulabdeenOfficial/social-news-bot)
+Самое простое (без затрат): локально через Docker или напрямую Python.
 
-### 🚆 Railway (Easiest)
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/ZainulabdeenOfficial/social-news-bot)
-
-### 🎨 Render (Most Reliable)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ZainulabdeenOfficial/social-news-bot)
-
-### 🔵 Heroku (Classic)
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/ZainulabdeenOfficial/social-news-bot)
-
-**Or use our universal deployment script:**
+### Вариант A: Docker
 ```bash
-python deploy.py
+cp env_template.txt .env  # заполните ключи
+docker compose up -d --build
+# Откройте дашборд: http://localhost:8501
 ```
 
-## ✨ Features
+### Вариант B: Python
+```bash
+pip install -r requirements.txt
+cp env_template.txt .env  # заполните ключи
+streamlit run web_dashboard.py
+# или автопостинг 24/7
+python main.py run
+```
+
+## ✨ Возможности
 
 - 📰 **Automated News Fetching**: Fetches latest tech news from multiple sources
-- 🤖 **AI Content Generation**: Uses OpenAI to create engaging social media posts
-- 🎨 **Image Generation**: Creates professional images for each post
+- 🤖 **AI‑генерация контента**: с помощью Gemini API (google‑generativeai)
+- 🎨 **Изображения**: локальная генерация (Pillow, бесплатно), оптимизация под платформы
 - 📱 **Multi-Platform Posting**: Posts to LinkedIn, Twitter, Facebook
 - ⏰ **Smart Scheduling**: Posts at optimal times for maximum engagement
 - 📊 **Dashboard Interface**: Beautiful web interface for monitoring and control
 - 🔄 **Continuous Operation**: Runs 24/7 with automated scheduling
 
-## 🛠️ Local Development
+## 🛠️ Локальная разработка
 
-### Prerequisites
-- Python 3.8+
-- OpenAI API key
-- Social media API keys (optional)
+### Требования
+- Python 3.10+
+- Gemini API key
+- API‑ключи соцсетей (опционально)
 
-### Installation
+### Установка
 ```bash
 # Clone the repository
 git clone https://github.com/ZainulabdeenOfficial/social-news-bot.git
 cd social-news-bot
 
-# Install dependencies
+# Установка зависимостей
 pip install -r requirements.txt
 
-# Set up environment variables
+# Переменные окружения
 cp env_template.txt .env
-# Edit .env with your API keys
+# Заполните .env своими ключами
 ```
 
-### Usage
+### Использование
 
-#### Web Dashboard
+#### Веб‑дашборд
 ```bash
 streamlit run web_dashboard.py
 ```
 
-#### Command Line Interface
+#### Командная строка
 ```bash
-# Start the automated scheduler
+# Запуск планировщика
 python main.py run
 
-# Post content immediately
+# Мгновенная публикация
 python main.py post-now
 
-# Fetch recent news
+# Получить новости
 python main.py fetch-news
 
-# Test all components
+# Тест компонентов
 python main.py test
 ```
 
@@ -111,14 +112,14 @@ python main.py test
 - [Vercel Deployment Guide](VERCEL_DEPLOYMENT_GUIDE.md)
 - [Quick Deploy Guide](QUICK_DEPLOY.md)
 
-## 🔧 Configuration
+## 🔧 Конфигурация
 
-### Required Environment Variables
+### Обязательные переменные окружения
 ```bash
-OPENAI_API_KEY=sk-your-openai-api-key-here
+GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### Optional Environment Variables
+### Опциональные переменные окружения (соцсети)
 ```bash
 # LinkedIn
 LINKEDIN_CLIENT_ID=your_linkedin_client_id
@@ -139,16 +140,21 @@ FACEBOOK_PAGE_ID=your_facebook_page_id
 ## 📁 Project Structure
 
 ```
+├── src/
+│   ├── config.py             # Настройки и .env
+│   ├── main.py               # CLI‑вход
+│   ├── scheduler.py          # Планировщик задач
+│   ├── ai/
+│   │   ├── content_generator.py   # Генерация постов (Gemini)
+│   │   └── image_generator.py     # Локальные изображения
+│   └── services/
+│       ├── news_fetcher.py        # RSS сборщик
+│       └── social_media_poster.py # Постинг в соцсети
+├── web_dashboard.py          # Streamlit дашборд (импортирует из src)
+├── main.py                   # Тонкая обёртка на src.main
 ├── api/
-│   └── index.py              # Vercel API endpoint
-├── web_dashboard.py          # Streamlit web interface
-├── main.py                   # CLI application
-├── config.py                 # Configuration management
-├── news_fetcher.py           # News fetching logic
-├── content_generator.py      # AI content generation
-├── image_generator.py        # Image generation
-├── social_media_poster.py    # Social media posting
-├── scheduler.py              # Scheduling logic
+│   └── index.py             # Serverless эндпоинты (Vercel/иные)
+├── tests/                    # pytest‑тесты
 ├── requirements.txt          # Python dependencies
 ├── vercel.json              # Vercel configuration
 ├── Procfile                 # Heroku configuration
@@ -160,7 +166,7 @@ FACEBOOK_PAGE_ID=your_facebook_page_id
 └── README.md                # This file
 ```
 
-## 🔍 API Endpoints
+## 🔍 API (serverless)
 
 ### Health Check
 ```
@@ -174,21 +180,25 @@ GET /api/status
 ```
 Returns status of all components (news fetcher, content generator, etc.).
 
-## 🚀 Performance
+## 🚀 Деплой и бесплатные варианты
+
+- Docker (локально, бесплатно): `docker compose up -d --build` → дашборд на `http://localhost:8501`.
+- Railway/Render/Heroku: можно деплоить бесплатно на старте, но фоновые джобы/кроны могут требовать платный план. Рекомендуем локальный Docker или VPS c `docker compose`.
+- Планировщик: контейнер `worker` выполняет `python -m src.main run`.
 
 - **Fast Deployment**: Optimized for all major platforms
 - **Auto-scaling**: Handles traffic spikes automatically
 - **Global CDN**: Content delivered from edge locations
 - **99.9% Uptime**: Reliable hosting infrastructure
 
-## 🔒 Security
+## 🔒 Безопасность
 
 - **Environment Variables**: Secure API key management
 - **HTTPS**: Automatic SSL certificates
 - **Input Validation**: All inputs are validated
 - **Rate Limiting**: Built-in protection against abuse
 
-## 📊 Monitoring
+## 📊 Мониторинг
 
 - **Health Checks**: Automatic monitoring endpoints
 - **Error Tracking**: Comprehensive error logging
@@ -203,18 +213,23 @@ Returns status of all components (news fetcher, content generator, etc.).
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## 📄 Лицензия
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🙏 Благодарности
 
 - OpenAI for providing the AI capabilities
 - Streamlit for the web framework
 - Vercel, Railway, Render, and Heroku for hosting platforms
 - All contributors and supporters
 
-## 📞 Support
+## 📞 Поддержка
+
+### Где взять ключи (бесплатно/триалы)
+- Gemini API: аккаунт Google → Google AI Studio → создайте API‑ключ, добавьте в `.env` как `GEMINI_API_KEY`.
+- LinkedIn/Twitter/Facebook: потребуется регистрация разработчика и создание приложения. Для тестов можно оставить пустыми — публикация будет пропущена, но генерация контента и дашборд будут работать.
+
 
 - **Documentation**: [MULTI_PLATFORM_DEPLOYMENT.md](MULTI_PLATFORM_DEPLOYMENT.md)
 - **Issues**: [GitHub Issues](https://github.com/ZainulabdeenOfficial/social-news-bot/issues)
