@@ -163,7 +163,7 @@ class Dashboard:
         
         # Configuration status
         config_status = {
-            "OpenAI API": bool(Config.OPENAI_API_KEY),
+            "Gemini API": bool(Config.GEMINI_API_KEY),
             "LinkedIn": bool(Config.LINKEDIN_ACCESS_TOKEN),
             "Twitter": bool(Config.TWITTER_API_KEY),
         }
@@ -542,8 +542,8 @@ class Dashboard:
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            openai_status = "✅ Configured" if Config.OPENAI_API_KEY else "❌ Not Configured"
-            st.metric("OpenAI API", openai_status)
+            gemini_status = "✅ Configured" if Config.GEMINI_API_KEY else "❌ Not Configured"
+            st.metric("Gemini API", gemini_status)
         
         with col2:
             linkedin_status = "✅ Configured" if Config.LINKEDIN_ACCESS_TOKEN else "❌ Not Configured"
@@ -562,15 +562,15 @@ class Dashboard:
         # API Configuration
         st.subheader("🔑 API Configuration")
         
-        with st.expander("OpenAI Configuration", expanded=True):
-            openai_key = st.text_input(
-                "OpenAI API Key",
-                value=Config.OPENAI_API_KEY or "",
+        with st.expander("Gemini Configuration", expanded=True):
+            gemini_key = st.text_input(
+                "Gemini API Key",
+                value=Config.GEMINI_API_KEY or "",
                 type="password"
             )
-            if st.button("Save OpenAI Key"):
-                self._save_to_env_file("OPENAI_API_KEY", openai_key)
-                st.success("OpenAI key saved!")
+            if st.button("Save Gemini Key"):
+                self._save_to_env_file("GEMINI_API_KEY", gemini_key)
+                st.success("Gemini key saved!")
         
         with st.expander("LinkedIn Configuration"):
             linkedin_client_id = st.text_input("LinkedIn Client ID", value=Config.LINKEDIN_CLIENT_ID or "")
@@ -662,20 +662,24 @@ class Dashboard:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("Test OpenAI"):
+            if st.button("Test Gemini"):
                 try:
-                    # Test OpenAI connection
+                    # Test Gemini connection via content generator
                     test_response = self.content_generator.generate_post_content(
-                        "Test article about AI technology",
-                        "This is a test article to verify OpenAI API connection.",
-                        "linkedin"
+                        {
+                            'title': 'Test Gemini connectivity',
+                            'description': 'Testing content generation via Gemini API',
+                            'source': 'Test',
+                            'link': 'https://example.com'
+                        },
+                        'linkedin'
                     )
                     if test_response:
-                        st.success("✅ OpenAI connection successful!")
+                        st.success("✅ Gemini connection successful!")
                     else:
-                        st.error("❌ OpenAI connection failed!")
+                        st.error("❌ Gemini connection failed!")
                 except Exception as e:
-                    st.error(f"❌ OpenAI connection failed: {str(e)}")
+                    st.error(f"❌ Gemini connection failed: {str(e)}")
         
         with col2:
             if st.button("Test LinkedIn"):
