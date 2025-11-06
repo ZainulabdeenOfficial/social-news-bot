@@ -9,6 +9,8 @@ from src.services.news_fetcher import NewsFetcher
 from src.ai.content_generator import ContentGenerator
 from src.ai.image_generator import ImageGenerator
 from src.services.social_media_poster import SocialMediaPoster
+from src.database.database import SessionLocal, init_db
+from src.database.models import Article, GeneratedContent, PostedContent
 
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +25,7 @@ class NewsAgentScheduler:
         self.social_poster = SocialMediaPoster()
         self.posting_schedule = Config.POSTING_SCHEDULE
         self.max_posts_per_day = Config.MAX_POSTS_PER_DAY
-        self.posted_articles = set()
+        init_db()
 
     def start_scheduler(self):
         logger.info("Starting News Agent Scheduler...")
@@ -45,80 +47,124 @@ class NewsAgentScheduler:
                 logger.info(f"Scheduled {platform} posts for {time_str}")
 
     def _fetch_and_prepare_daily_news(self):
+        db = SessionLocal()
         try:
             logger.info("Fetching daily news...")
             recent_news = self.news_fetcher.get_recent_news(hours=24)
             if not recent_news:
                 logger.warning("No recent news found")
                 return
-            self.daily_news = recent_news
-            self._generate_content_for_articles(recent_news[:self.max_posts_per_day])
-            logger.info(f"Prepared {len(recent_news)} articles for daily posting")
+
+            for article_data in recent_news:
+                existing_article = db.query(Article).filter_by(link=article_data['link']).first()
+                if not existing_article:
+                    new_article = Article(**article_data)
+                    db.add(new_article)
+            db.commit()
+
+            articles_to_process = db.query(Article).order_by(Article.pub_date.desc()).limit(self.max_posts_per_day).all()
+            self._generate_content_for_articles(articles_to_process)
+            logger.info(f"Prepared {len(articles_to_process)} articles for daily posting")
         except Exception as e:
             logger.error(f"Error fetching daily news: {e}")
+        finally:
+            db.close()
 
-    def _generate_content_for_articles(self, articles: List[Dict]):
+    def _generate_content_for_articles(self, articles: List[Article]):
+        db = SessionLocal()
         try:
-            self.prepared_content = {}
             for article in articles:
-                article_id = article.get('link', article.get('title', ''))
-                if article_id in self.posted_articles:
+                # Check if content has already been generated
+                existing_content = db.query(GeneratedContent).filter_by(article_id=article.id).first()
+                if existing_content:
                     continue
+
                 for platform in self.posting_schedule.keys():
                     try:
-                        post_data = self.content_generator.generate_post_content(article, platform)
-                        image_prompt = post_data.get('image_prompt', f"Tech news: {article['title']}")
-                        image_path = f"images/{platform}_{article_id.replace('/', '_')}.png"
+                        post_data = self.content_generator.generate_post_content(article.__dict__, platform)
+                        image_prompt = post_data.get('image_prompt', f"Tech news: {article.title}")
+                        image_path = f"images/{platform}_{article.link.replace('/', '_')}.png"
                         generated_image = self.image_generator.generate_image(image_prompt, image_path)
                         if generated_image:
                             optimized_image = self.image_generator.optimize_for_platform(generated_image, platform)
                             post_data['image_path'] = optimized_image
-                        if platform not in self.prepared_content:
-                            self.prepared_content[platform] = []
-                        self.prepared_content[platform].append({
-                            'post_data': post_data,
-                            'article': article,
-                            'image_path': post_data.get('image_path')
-                        })
-                        logger.info(f"Generated content for {platform}: {article['title'][:50]}...")
+
+                        new_content = GeneratedContent(
+                            article_id=article.id,
+                            platform=platform,
+                            post_text=post_data['post_text'],
+                            hashtags=",".join(post_data['hashtags']),
+                            image_prompt=image_prompt,
+                            image_path=post_data.get('image_path')
+                        )
+                        db.add(new_content)
+                        logger.info(f"Generated content for {platform}: {article.title[:50]}...")
                     except Exception as e:
                         logger.error(f"Error generating content for {platform}: {e}")
                         continue
+            db.commit()
             logger.info(f"Generated content for {len(articles)} articles across {len(self.posting_schedule)} platforms")
         except Exception as e:
             logger.error(f"Error generating content for articles: {e}")
+        finally:
+            db.close()
 
     def _post_scheduled_content(self, platform: str):
+        db = SessionLocal()
         try:
             logger.info(f"Posting scheduled content for {platform}...")
-            if not hasattr(self, 'prepared_content') or platform not in self.prepared_content:
-                logger.warning(f"No prepared content for {platform}")
-                return
-            platform_content = self.prepared_content[platform]
-            if not platform_content:
+            content_to_post = db.query(GeneratedContent).filter(
+                GeneratedContent.platform == platform,
+                ~GeneratedContent.posted_content.any()
+            ).first()
+
+            if not content_to_post:
                 logger.warning(f"No content available for {platform}")
                 return
-            post_item = platform_content.pop(0)
-            post_data = post_item['post_data']
-            article = post_item['article']
-            image_path = post_item.get('image_path')
-            success = self.social_poster.post_to_platform(platform, post_data, image_path)
+
+            post_data = {
+                'post_text': content_to_post.post_text,
+                'hashtags': content_to_post.hashtags.split(','),
+            }
+            image_path = content_to_post.image_path
+
+            success, post_url = self.social_poster.post_to_platform(platform, post_data, image_path)
+
             if success:
-                article_id = article.get('link', article.get('title', ''))
-                self.posted_articles.add(article_id)
-                logger.info(f"Successfully posted to {platform}: {article['title'][:50]}...")
+                new_post = PostedContent(
+                    generated_content_id=content_to_post.id,
+                    platform=platform,
+                    post_url=post_url,
+                    status='success'
+                )
+                db.add(new_post)
+                db.commit()
+                logger.info(f"Successfully posted to {platform}: {content_to_post.article.title[:50]}...")
             else:
+                new_post = PostedContent(
+                    generated_content_id=content_to_post.id,
+                    platform=platform,
+                    status='failed',
+                    error_message="Failed to post"
+                )
+                db.add(new_post)
+                db.commit()
                 logger.error(f"Failed to post to {platform}")
         except Exception as e:
             logger.error(f"Error posting scheduled content for {platform}: {e}")
+        finally:
+            db.close()
 
     def _generate_daily_summary(self):
+        db = SessionLocal()
         try:
             logger.info("Generating daily summary...")
-            if not hasattr(self, 'daily_news') or not self.daily_news:
+            daily_articles = db.query(Article).filter(Article.pub_date >= datetime.utcnow() - timedelta(days=1)).all()
+            if not daily_articles:
                 logger.warning("No daily news available for summary")
                 return
-            summary_data = self.content_generator.generate_daily_summary(self.daily_news)
+
+            summary_data = self.content_generator.generate_daily_summary([article.__dict__ for article in daily_articles])
             summary_image_prompt = "Daily tech news summary, professional layout, modern design"
             summary_image_path = f"images/daily_summary_{datetime.now().strftime('%Y%m%d')}.png"
             generated_image = self.image_generator.generate_image(summary_image_prompt, summary_image_path)
@@ -128,17 +174,27 @@ class NewsAgentScheduler:
             self.social_poster.post_to_platform('linkedin', summary_data, summary_data.get('image_path'))
         except Exception as e:
             logger.error(f"Error generating daily summary: {e}")
+        finally:
+            db.close()
 
     def _cleanup_old_data(self):
+        db = SessionLocal()
         try:
             logger.info("Cleaning up old data...")
-            cutoff_date = datetime.now() - timedelta(days=7)
+            cutoff_date = datetime.utcnow() - timedelta(days=7)
+
+            # Clean up old articles, generated content, and posts
+            db.query(PostedContent).filter(PostedContent.posted_at < cutoff_date).delete()
+            db.query(GeneratedContent).filter(GeneratedContent.created_at < cutoff_date).delete()
+            db.query(Article).filter(Article.created_at < cutoff_date).delete()
+            db.commit()
+
             import glob
             import os
             image_files = glob.glob("images/*.png")
             for image_file in image_files:
                 file_time = datetime.fromtimestamp(os.path.getctime(image_file))
-                if file_time < cutoff_date:
+                if file_time < datetime.now() - timedelta(days=7):
                     try:
                         os.remove(image_file)
                         logger.info(f"Removed old image: {image_file}")
@@ -146,37 +202,87 @@ class NewsAgentScheduler:
                         logger.error(f"Error removing {image_file}: {e}")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+        finally:
+            db.close()
 
-    def post_now(self, platform: str = None):
+    def post_now(self, platform: str = None, article_link: str = None):
+        db = SessionLocal()
         try:
             logger.info("Posting content now...")
-            recent_news = self.news_fetcher.get_recent_news(hours=6)
-            if not recent_news:
+            if article_link:
+                article = db.query(Article).filter_by(link=article_link).first()
+            else:
+                article = db.query(Article).order_by(Article.pub_date.desc()).first()
+
+            if not article:
                 logger.warning("No recent news found")
                 return
-            article = recent_news[0]
+
             platforms = [platform] if platform else list(self.posting_schedule.keys())
             for p in platforms:
                 try:
-                    post_data = self.content_generator.generate_post_content(article, p)
-                    image_prompt = post_data.get('image_prompt', f"Tech news: {article['title']}")
+                    post_data = self.content_generator.generate_post_content(article.__dict__, p)
+                    image_prompt = post_data.get('image_prompt', f"Tech news: {article.title}")
                     image_path = f"images/immediate_{p}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                     generated_image = self.image_generator.generate_image(image_prompt, image_path)
                     if generated_image:
                         optimized_image = self.image_generator.optimize_for_platform(generated_image, p)
                         post_data['image_path'] = optimized_image
-                    self.social_poster.post_to_platform(p, post_data, post_data.get('image_path'))
+
+                    success, post_url = self.social_poster.post_to_platform(p, post_data, post_data.get('image_path'))
+
+                    # Find or create GeneratedContent
+                    generated_content = db.query(GeneratedContent).filter_by(article_id=article.id, platform=p).first()
+                    if not generated_content:
+                        generated_content = GeneratedContent(
+                            article_id=article.id,
+                            platform=p,
+                            post_text=post_data['post_text'],
+                            hashtags=",".join(post_data.get('hashtags', [])),
+                            image_prompt=image_prompt,
+                            image_path=post_data.get('image_path')
+                        )
+                        db.add(generated_content)
+                        db.commit()
+
+                    if success:
+                        new_post = PostedContent(
+                            generated_content_id=generated_content.id,
+                            platform=p,
+                            post_url=post_url,
+                            status='success'
+                        )
+                        db.add(new_post)
+                        db.commit()
+                        logger.info(f"Successfully posted to {p}: {article.title[:50]}...")
+                    else:
+                        new_post = PostedContent(
+                            generated_content_id=generated_content.id,
+                            platform=p,
+                            status='failed',
+                            error_message="Failed to post"
+                        )
+                        db.add(new_post)
+                        db.commit()
+                        logger.error(f"Failed to post to {p}")
+
                 except Exception as e:
                     logger.error(f"Error posting to {p}: {e}")
         except Exception as e:
             logger.error(f"Error in immediate posting: {e}")
+        finally:
+            db.close()
 
     def get_schedule_status(self) -> Dict:
-        return {
-            'next_runs': schedule.get_jobs(),
-            'posted_articles_count': len(self.posted_articles),
-            'prepared_content_count': len(getattr(self, 'prepared_content', {})),
-            'daily_news_count': len(getattr(self, 'daily_news', []))
-        }
+        db = SessionLocal()
+        try:
+            return {
+                'next_runs': schedule.get_jobs(),
+                'posted_articles_count': db.query(PostedContent).count(),
+                'prepared_content_count': db.query(GeneratedContent).count(),
+                'daily_news_count': db.query(Article).filter(Article.pub_date >= datetime.utcnow() - timedelta(days=1)).count()
+            }
+        finally:
+            db.close()
 
 

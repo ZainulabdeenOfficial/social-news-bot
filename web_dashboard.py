@@ -15,6 +15,8 @@ from src.ai.content_generator import ContentGenerator
 from src.ai.image_generator import ImageGenerator
 from src.services.social_media_poster import SocialMediaPoster
 from src.scheduler import NewsAgentScheduler
+from src.database.database import SessionLocal, init_db
+from src.database.models import Article, GeneratedContent, PostedContent
 
 # Page configuration
 st.set_page_config(
@@ -62,6 +64,7 @@ class Dashboard:
         self.image_generator = ImageGenerator()
         self.social_poster = SocialMediaPoster()
         self.scheduler = NewsAgentScheduler()
+        init_db()
     
     def _save_to_env_file(self, key: str, value: str):
         """Save a key-value pair to the .env file"""
@@ -270,10 +273,10 @@ class Dashboard:
     def news_feed_tab(self):
         """News feed tab showing latest articles"""
         st.header("📰 Latest Tech News")
-        
+
         # Filters
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             hours = st.selectbox(
                 "Time Range",
@@ -281,57 +284,57 @@ class Dashboard:
                 index=2,
                 format_func=lambda x: f"{x} hours"
             )
-        
+
         with col2:
             source_filter = st.selectbox(
                 "Source",
                 ["All"] + [source['name'] for source in Config.NEWS_SOURCES]
             )
-        
+
         with col3:
             if st.button("🔄 Refresh News"):
                 st.rerun()
-        
+
         # Fetch and display news
-        with st.spinner("Fetching latest news..."):
-            try:
-                news = self.news_fetcher.get_recent_news(hours=hours)
+        db = SessionLocal()
+        try:
+            with st.spinner("Fetching latest news..."):
+                query = db.query(Article).filter(Article.pub_date >= datetime.now() - timedelta(hours=hours))
                 
                 if source_filter != "All":
-                    news = [article for article in news if article['source'] == source_filter]
+                    query = query.filter(Article.source == source_filter)
                 
+                news = query.order_by(Article.pub_date.desc()).all()
+
                 if not news:
                     st.warning("No news found for the selected criteria")
                     return
-                
+
                 st.success(f"Found {len(news)} articles")
-                
+
                 # Display articles
                 for i, article in enumerate(news):
-                    with st.expander(f"{i+1}. {article['title']}", expanded=i<3):
+                    with st.expander(f"{i+1}. {article.title}", expanded=i<3):
                         col1, col2 = st.columns([3, 1])
-                        
+
                         with col1:
-                            st.write(f"**Source:** {article['source']}")
-                            st.write(f"**Published:** {article['published']}")
-                            st.write(f"**Description:** {article['description']}")
-                            st.write(f"**Link:** {article['link']}")
-                        
+                            st.write(f"**Source:** {article.source}")
+                            st.write(f"**Published:** {article.pub_date}")
+                            st.write(f"**Description:** {article.description}")
+                            st.write(f"**Link:** {article.link}")
+
                         with col2:
                             if st.button(f"📤 Post Article {i+1}", key=f"post_{i}"):
-                                self._post_article(article)
-                        
+                                self._post_article(article.link)
+
                         # Show image if available
-                        if article.get('image_url'):
-                            st.image(article['image_url'], caption="Article Image", use_column_width=True)
+                        if article.image_url:
+                            st.image(article.image_url, caption="Article Image", use_column_width=True)
                 
-                # Show trending topics
-                st.subheader("🔥 Trending Topics")
-                trending = self.news_fetcher.get_trending_topics(news)
-                st.write(", ".join([f"#{topic}" for topic in trending[:10]]))
-                
-            except Exception as e:
-                st.error(f"Error fetching news: {e}")
+        except Exception as e:
+            st.error(f"Error fetching news: {e}")
+        finally:
+            db.close()
     
     def content_generator_tab(self):
         """Content generator tab for testing and manual generation"""
@@ -706,32 +709,49 @@ class Dashboard:
     # Helper methods
     def _get_articles_count(self):
         """Get articles count for today"""
+        db = SessionLocal()
         try:
-            news = self.news_fetcher.get_recent_news(hours=24)
-            return len(news)
-        except:
-            return 0
-    
+            return db.query(Article).filter(Article.pub_date >= datetime.now() - timedelta(days=1)).count()
+        finally:
+            db.close()
+
     def _get_articles_delta(self):
         """Get articles delta from yesterday"""
+        db = SessionLocal()
         try:
-            yesterday_news = self.news_fetcher.get_recent_news(hours=48)
-            today_news = self.news_fetcher.get_recent_news(hours=24)
-            return len(today_news) - (len(yesterday_news) - len(today_news))
-        except:
-            return 0
-    
+            today_count = db.query(Article).filter(Article.pub_date >= datetime.now() - timedelta(days=1)).count()
+            yesterday_count = db.query(Article).filter(
+                Article.pub_date >= datetime.now() - timedelta(days=2),
+                Article.pub_date < datetime.now() - timedelta(days=1)
+            ).count()
+            return today_count - yesterday_count
+        finally:
+            db.close()
+
     def _get_posts_count(self):
         """Get posts count for today"""
-        # This would come from a database in a real implementation
-        return 5
-    
+        db = SessionLocal()
+        try:
+            return db.query(PostedContent).filter(PostedContent.posted_at >= datetime.now() - timedelta(days=1)).count()
+        finally:
+            db.close()
+
     def _get_posts_delta(self):
         """Get posts delta from yesterday"""
-        return 2
+        db = SessionLocal()
+        try:
+            today_count = db.query(PostedContent).filter(PostedContent.posted_at >= datetime.now() - timedelta(days=1)).count()
+            yesterday_count = db.query(PostedContent).filter(
+                PostedContent.posted_at >= datetime.now() - timedelta(days=2),
+                PostedContent.posted_at < datetime.now() - timedelta(days=1)
+            ).count()
+            return today_count - yesterday_count
+        finally:
+            db.close()
     
     def _get_engagement_rate(self):
         """Get engagement rate"""
+        # This would require social media API integration to get real data
         return 15.5
     
     def _get_engagement_delta(self):
@@ -740,39 +760,52 @@ class Dashboard:
     
     def _get_posting_activity_data(self):
         """Get posting activity data for chart"""
-        # Mock data - in real implementation this would come from database
-        return pd.DataFrame({
-            'time': pd.date_range(start=datetime.now() - timedelta(hours=24), periods=24, freq='H'),
-            'posts': [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0]
-        })
+        db = SessionLocal()
+        try:
+            posts = db.query(PostedContent).filter(PostedContent.posted_at >= datetime.now() - timedelta(days=1)).all()
+            if not posts:
+                return pd.DataFrame({'time': [], 'posts': []})
+
+            df = pd.DataFrame([{'time': p.posted_at} for p in posts])
+            df['time'] = pd.to_datetime(df['time'])
+            df = df.set_index('time').resample('H').size().reset_index(name='posts')
+            return df
+        finally:
+            db.close()
     
     def _get_trending_topics_data(self):
         """Get trending topics data for chart"""
-        # Mock data - in real implementation this would come from analysis
+        # This would require more advanced NLP analysis
         return pd.DataFrame({
             'topic': ['AI', 'Machine Learning', 'Blockchain', 'Cloud Computing', 'Cybersecurity'],
             'count': [15, 12, 8, 6, 4]
         })
     
     def _get_recent_activity(self):
-        """Get recent activity log"""
-        # Mock data - in real implementation this would come from logs
-        return [
-            {'time': '10:30', 'message': 'Posted to LinkedIn', 'status': 'success'},
-            {'time': '09:15', 'message': 'Generated content for 5 articles', 'status': 'success'},
-            {'time': '08:45', 'message': 'Fetched 12 new articles', 'status': 'success'},
-            {'time': '08:00', 'message': 'Daily news fetch completed', 'status': 'success'},
-        ]
-    
-    def _post_article(self, article):
-        """Post a specific article"""
+        """Get recent activity log from the database"""
+        db = SessionLocal()
+        try:
+            recent_posts = db.query(PostedContent).order_by(PostedContent.posted_at.desc()).limit(5).all()
+            activity = []
+            for post in recent_posts:
+                activity.append({
+                    'time': post.posted_at.strftime('%H:%M'),
+                    'message': f"Posted to {post.platform}: {post.generated_content.article.title[:50]}...",
+                    'status': post.status
+                })
+            return activity
+        finally:
+            db.close()
+
+    def _post_article(self, article_link: str):
+        """Post a specific article by its link"""
         with st.spinner("Posting article..."):
             try:
-                self.scheduler.post_now()
+                self.scheduler.post_now(article_link=article_link)
                 st.success("Article posted successfully!")
             except Exception as e:
                 st.error(f"Error posting article: {e}")
-    
+
     def _generate_template_content(self, template, article):
         """Generate template-specific content"""
         templates = {
@@ -782,14 +815,24 @@ class Dashboard:
             "Industry Update": f"📈 Industry Update: {article['title']}\n\n{article['description']}\n\n#IndustryUpdate #Technology"
         }
         return templates.get(template, "Template not found")
-    
+
     def _get_recent_posts(self):
-        """Get recent posts data"""
-        # Mock data - in real implementation this would come from social media APIs
-        return [
-            {'platform': 'linkedin', 'time': '2 hours ago', 'content': 'Exciting news in AI technology...', 'likes': 45, 'comments': 12},
-            {'platform': 'twitter', 'time': '4 hours ago', 'content': 'Breaking: New tech developments...', 'likes': 23, 'comments': 8},
-        ]
+        """Get recent posts data from the database"""
+        db = SessionLocal()
+        try:
+            recent_posts = db.query(PostedContent).order_by(PostedContent.posted_at.desc()).limit(5).all()
+            posts = []
+            for post in recent_posts:
+                posts.append({
+                    'platform': post.platform,
+                    'time': post.posted_at.strftime('%Y-%m-%d %H:%M'),
+                    'content': post.generated_content.post_text,
+                    'likes': 0, # Placeholder, requires API integration
+                    'comments': 0 # Placeholder, requires API integration
+                })
+            return posts
+        finally:
+            db.close()
 
 def main():
     dashboard = Dashboard()

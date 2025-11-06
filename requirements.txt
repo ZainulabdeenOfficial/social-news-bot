@@ -21,3 +21,5 @@ plotly>=5.17.0
 
 # Testing
 pytest>=8.0.0
+SQLAlchemy>=1.4.0
+alembic>=1.7.0
